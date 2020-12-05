@@ -601,39 +601,16 @@ typedef struct TableAmRoutine
 									BufferAccessStrategy bstrategy);
 
 	/*
-	 * Prepare to analyze block `blockno` of `scan`. The scan has been started
-	 * with table_beginscan_analyze().  See also
-	 * table_scan_analyze_next_block().
-	 *
-	 * The callback may acquire resources like locks that are held until
-	 * table_scan_analyze_next_tuple() returns false. It e.g. can make sense
-	 * to hold a lock until all tuples on a block have been analyzed by
-	 * scan_analyze_next_tuple.
-	 *
-	 * The callback can return false if the block is not suitable for
-	 * sampling, e.g. because it's a metapage that could never contain tuples.
-	 *
-	 * XXX: This obviously is primarily suited for block-based AMs. It's not
-	 * clear what a good interface for non block based AMs would be, so there
-	 * isn't one yet.
+	 * This callback needs to fill reservour with sample rows during analyze
+	 * scan.
 	 */
-	bool		(*scan_analyze_next_block) (TableScanDesc scan,
-											BlockNumber blockno,
-											BufferAccessStrategy bstrategy);
-
-	/*
-	 * See table_scan_analyze_next_tuple().
-	 *
-	 * Not every AM might have a meaningful concept of dead rows, in which
-	 * case it's OK to not increment *deadrows - but note that that may
-	 * influence autovacuum scheduling (see comment for relation_vacuum
-	 * callback).
-	 */
-	bool		(*scan_analyze_next_tuple) (TableScanDesc scan,
-											TransactionId OldestXmin,
-											double *liverows,
-											double *deadrows,
-											TupleTableSlot *slot);
+	int			(*acquire_sample_rows) (TableScanDesc scan,
+										int elevel,
+										BufferAccessStrategy bstrategy,
+										HeapTuple *rows,
+										int targrows,
+										double *totalrows,
+										double *totaldeadrows);
 
 	/* see table_index_build_range_scan for reference about parameters */
 	double		(*index_build_range_scan) (Relation table_rel,
@@ -1591,40 +1568,16 @@ table_relation_vacuum(Relation rel, struct VacuumParams *params,
 	rel->rd_tableam->relation_vacuum(rel, params, bstrategy);
 }
 
-/*
- * Prepare to analyze block `blockno` of `scan`. The scan needs to have been
- * started with table_beginscan_analyze().  Note that this routine might
- * acquire resources like locks that are held until
- * table_scan_analyze_next_tuple() returns false.
- *
- * Returns false if block is unsuitable for sampling, true otherwise.
- */
-static inline bool
-table_scan_analyze_next_block(TableScanDesc scan, BlockNumber blockno,
-							  BufferAccessStrategy bstrategy)
+static inline int
+table_acquire_sample_rows(TableScanDesc scan, int elevel,
+						  BufferAccessStrategy bstrategy,
+						  HeapTuple *rows, int targrows,
+						  double *totalrows, double *totaldeadrows)
 {
-	return scan->rs_rd->rd_tableam->scan_analyze_next_block(scan, blockno,
-															bstrategy);
-}
-
-/*
- * Iterate over tuples in the block selected with
- * table_scan_analyze_next_block() (which needs to have returned true, and
- * this routine may not have returned false for the same block before). If a
- * tuple that's suitable for sampling is found, true is returned and a tuple
- * is stored in `slot`.
- *
- * *liverows and *deadrows are incremented according to the encountered
- * tuples.
- */
-static inline bool
-table_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
-							  double *liverows, double *deadrows,
-							  TupleTableSlot *slot)
-{
-	return scan->rs_rd->rd_tableam->scan_analyze_next_tuple(scan, OldestXmin,
-															liverows, deadrows,
-															slot);
+	return scan->rs_rd->rd_tableam->acquire_sample_rows(scan, elevel,
+														bstrategy, rows,
+														targrows, totalrows,
+														totaldeadrows);
 }
 
 /*
