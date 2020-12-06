@@ -20,6 +20,7 @@
 #include "access/relscan.h"
 #include "access/sdir.h"
 #include "access/xact.h"
+#include "commands/vacuum.h"
 #include "utils/guc.h"
 #include "utils/rel.h"
 #include "utils/snapshot.h"
@@ -606,6 +607,8 @@ typedef struct TableAmRoutine
 	 */
 	int			(*acquire_sample_rows) (TableScanDesc scan,
 										int elevel,
+										int natts,
+										VacAttrStats **stats,
 										BufferAccessStrategy bstrategy,
 										HeapTuple *rows,
 										int targrows,
@@ -1570,11 +1573,13 @@ table_relation_vacuum(Relation rel, struct VacuumParams *params,
 
 static inline int
 table_acquire_sample_rows(TableScanDesc scan, int elevel,
+						  int natts, VacAttrStats **stats,
 						  BufferAccessStrategy bstrategy,
 						  HeapTuple *rows, int targrows,
 						  double *totalrows, double *totaldeadrows)
 {
 	return scan->rs_rd->rd_tableam->acquire_sample_rows(scan, elevel,
+														natts, stats,
 														bstrategy, rows,
 														targrows, totalrows,
 														totaldeadrows);
