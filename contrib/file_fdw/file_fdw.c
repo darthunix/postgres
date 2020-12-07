@@ -159,6 +159,7 @@ static void estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
 						   FileFdwPlanState *fdw_private,
 						   Cost *startup_cost, Cost *total_cost);
 static int	file_acquire_sample_rows(Relation onerel, int elevel,
+									 int natts, VacAttrStats **stats,
 									 HeapTuple *rows, int targrows,
 									 double *totalrows, double *totaldeadrows);
 
@@ -1093,6 +1094,7 @@ estimate_costs(PlannerInfo *root, RelOptInfo *baserel,
  */
 static int
 file_acquire_sample_rows(Relation onerel, int elevel,
+						 int natts, VacAttrStats **stats,
 						 HeapTuple *rows, int targrows,
 						 double *totalrows, double *totaldeadrows)
 {

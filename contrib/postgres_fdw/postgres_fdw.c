@@ -486,6 +486,7 @@ static void process_query_params(ExprContext *econtext,
 								 List *param_exprs,
 								 const char **param_values);
 static int	postgresAcquireSampleRowsFunc(Relation relation, int elevel,
+										  int natts, VacAttrStats **stats,
 										  HeapTuple *rows, int targrows,
 										  double *totalrows,
 										  double *totaldeadrows);
@@ -4676,6 +4677,7 @@ postgresAnalyzeForeignTable(Relation relation,
  */
 static int
 postgresAcquireSampleRowsFunc(Relation relation, int elevel,
+							  int natts, VacAttrStats **stats,
 							  HeapTuple *rows, int targrows,
 							  double *totalrows,
 							  double *totaldeadrows)
