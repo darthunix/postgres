@@ -2137,7 +2137,7 @@ pqBuildStartupPacket3(PGconn *conn, int *packetlen,
 /*
  * Build comma-separated list of compression algorithms suggested by client to the server.
  * It can be either explicitly specified by user in connection string, either
- * include all algorithms supported by clit library.
+ * include all algorithms supported by client library.
  * This functions returns true if compression string is successfully parsed and
  * stores comma-separated list of algorithms in *client_compressors.
  * If compression is disabled, then NULL is assigned to  *client_compressors.
@@ -2208,7 +2208,8 @@ build_compressors_list(PGconn *conn, char** client_compressors, bool build_descr
 		char *src, *dst;
 		int n_suggested_algorithms = 0;
 
-		*client_compressors = src = dst = strdup(value);
+		*client_compressors = src = strdup(value);
+		dst = strdup(value);
 
 		if (build_descriptors)
 			conn->compressors = malloc(n_supported_algorithms*sizeof(pg_conn_compressor));
