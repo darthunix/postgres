@@ -905,8 +905,9 @@ pqSendSome(PGconn *conn, int len)
 	while (len > 0 || zpq_buffered_tx(conn->zstream))
 	{
 		int			sent;
-		size_t      processed = 0;
-        /*
+		size_t		processed = 0;
+
+		/*
 		 * Use zpq_write if compression is switched on
 		 */
 		sent = conn->zstream
@@ -920,7 +921,7 @@ pqSendSome(PGconn *conn, int len)
 		 * failure-point appears to be different in different versions of
 		 * Windows, but 64k should always be safe.
 		 */
-			: pqsecure_write(conn, ptr, Min(len, 65536));
+:			pqsecure_write(conn, ptr, Min(len, 65536));
 #endif
 		ptr += processed;
 		len -= processed;

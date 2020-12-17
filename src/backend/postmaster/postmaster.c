@@ -218,6 +218,7 @@ int			ReservedBackends;
 /* The socket(s) we're listening to. */
 #define MAXLISTEN	64
 static pgsocket ListenSocket[MAXLISTEN];
+
 /*
  * These globals control the behavior of the postmaster in case some
  * backend dumps core.  Normally, it kills all peers of the dead backend
@@ -345,7 +346,7 @@ typedef enum
 	ALLOW_ALL_CONNS,			/* normal not-shutting-down state */
 	ALLOW_SUPERUSER_CONNS,		/* only superusers can connect */
 	ALLOW_NO_CONNS				/* no new connections allowed, period */
-} ConnsAllowedState;
+}			ConnsAllowedState;
 
 static ConnsAllowedState connsAllowed = ALLOW_ALL_CONNS;
 

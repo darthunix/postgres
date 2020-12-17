@@ -121,7 +121,7 @@
  */
 int			Unix_socket_permissions;
 char	   *Unix_socket_group;
-bool        libpq_compression;
+bool		libpq_compression;
 
 /* Where the Unix socket files are (list of palloc'd strings) */
 static List *sock_paths = NIL;
@@ -145,7 +145,7 @@ static char PqRecvBuffer[PQ_RECV_BUFFER_SIZE];
 static int	PqRecvPointer;		/* Next index to read a byte from PqRecvBuffer */
 static int	PqRecvLength;		/* End of data available in PqRecvBuffer */
 
-static ZpqStream* PqStream;
+static ZpqStream * PqStream;
 
 
 /*
@@ -190,17 +190,21 @@ const PQcommMethods *PqCommMethods = &PqCommSocketMethods;
 
 WaitEventSet *FeBeWaitSet;
 
-static ssize_t write_compressed(void* arg, void const* data, size_t size)
+static ssize_t
+write_compressed(void *arg, void const *data, size_t size)
 {
-	ssize_t rc = secure_write((Port*)arg, (void*)data, size);
+	ssize_t		rc = secure_write((Port *) arg, (void *) data, size);
+
 	if (rc > 0)
 		pgstat_report_network_traffic(0, 0, 0, rc);
 	return rc;
 }
 
-static ssize_t read_compressed(void* arg, void* data, size_t size)
+static ssize_t
+read_compressed(void *arg, void *data, size_t size)
 {
-	ssize_t rc = secure_read((Port*)arg, data, size);
+	ssize_t		rc = secure_read((Port *) arg, data, size);
+
 	if (rc > 0)
 		pgstat_report_network_traffic(0, 0, rc, 0);
 	return rc;
@@ -215,22 +219,23 @@ static ssize_t read_compressed(void* arg, void* data, size_t size)
  * --------------------------------
  */
 int
-pq_configure(Port* port)
+pq_configure(Port *port)
 {
-	char* client_compression_algorithms = port->compression_algorithms;
+	char	   *client_compression_algorithms = port->compression_algorithms;
 
 	/*
-	 * If client request compression, it sends list of supported compression algorithms separated by comma.
+	 * If client request compression, it sends list of supported compression
+	 * algorithms separated by comma.
 	 */
 	if (client_compression_algorithms && libpq_compression)
 	{
-		int compression_level = ZPQ_DEFAULT_COMPRESSION_LEVEL;
-		char compression[6] = {'z',0,0,0,5,0}; /* message length = 5 */
-		int impl = -1;
-		int rc;
-		char** server_compression_algorithms = zpq_get_supported_algorithms();
-		int index = -1;
-		char* protocol_extension = strchr(client_compression_algorithms, ';');
+		int			compression_level = ZPQ_DEFAULT_COMPRESSION_LEVEL;
+		char		compression[6] = {'z', 0, 0, 0, 5, 0};	/* message length = 5 */
+		int			impl = -1;
+		int			rc;
+		char	  **server_compression_algorithms = zpq_get_supported_algorithms();
+		int			index = -1;
+		char	   *protocol_extension = strchr(client_compression_algorithms, ';');
 
 		/* No protocol extension are currently supported */
 		if (protocol_extension)
@@ -238,18 +243,19 @@ pq_configure(Port* port)
 
 		for (int i = 0; *client_compression_algorithms; i++)
 		{
-			char* sep = strchr(client_compression_algorithms, ',');
-			char* level;
+			char	   *sep = strchr(client_compression_algorithms, ',');
+			char	   *level;
+
 			if (sep != NULL)
 				*sep = '\0';
 
 			level = strchr(client_compression_algorithms, ':');
 			if (level != NULL)
 			{
-				*level = '\0'; /* compression level is ignored now */
-				if (sscanf("%d", level+1, &compression_level) != 1)
+				*level = '\0';	/* compression level is ignored now */
+				if (sscanf("%d", level + 1, &compression_level) != 1)
 					ereport(LOG,
-							(errmsg("Invalid compression level: %s", level+1)));
+							(errmsg("Invalid compression level: %s", level + 1)));
 			}
 			for (impl = 0; server_compression_algorithms[impl] != NULL; impl++)
 			{
@@ -261,21 +267,25 @@ pq_configure(Port* port)
 			}
 
 			if (sep != NULL)
-				client_compression_algorithms = sep+1;
+				client_compression_algorithms = sep + 1;
 			else
 				break;
 		}
-	  SendCompressionAck:
+SendCompressionAck:
 		free(server_compression_algorithms);
-		compression[5] = (char)index;
-		/* Send 'z' message to the client with selected compression algorithm (or -1 if not found) */
+		compression[5] = (char) index;
+
+		/*
+		 * Send 'z' message to the client with selected compression algorithm
+		 * (or -1 if not found)
+		 */
 		socket_set_nonblocking(false);
 		while ((rc = secure_write(MyProcPort, compression, sizeof(compression))) < 0
 			   && errno == EINTR);
-		if ((size_t)rc != sizeof(compression))
+		if ((size_t) rc != sizeof(compression))
 			return -1;
 
-		if (index >= 0) /* Use compression */
+		if (index >= 0)			/* Use compression */
 		{
 			PqStream = zpq_create(impl, compression_level, write_compressed, read_compressed, MyProcPort, NULL, 0);
 			if (!PqStream)
@@ -1042,14 +1052,14 @@ socket_set_nonblocking(bool nonblocking)
 /* --------------------------------
  *		pq_recvbuf - load some bytes into the input buffer
  *
- *      nowait parameter toggles non-blocking mode. 
+ *      nowait parameter toggles non-blocking mode.
  *		returns number of read bytes, EOF if trouble
  * --------------------------------
  */
 static int
 pq_recvbuf(bool nowait)
 {
-	int			   r;
+	int			r;
 
 	if (PqRecvPointer > 0)
 	{
@@ -1071,7 +1081,10 @@ pq_recvbuf(bool nowait)
 	/* Can fill buffer from PqRecvLength and upwards */
 	for (;;)
 	{
-		/* If streaming compression is enabled then use correspondent compression read function. */
+		/*
+		 * If streaming compression is enabled then use correspondent
+		 * compression read function.
+		 */
 		r = PqStream
 			? zpq_read(PqStream, PqRecvBuffer + PqRecvLength,
 					   PQ_RECV_BUFFER_SIZE - PqRecvLength)
@@ -1082,7 +1095,8 @@ pq_recvbuf(bool nowait)
 		{
 			if (r == ZPQ_DECOMPRESS_ERROR)
 			{
-				char const* msg = zpq_error(PqStream);
+				char const *msg = zpq_error(PqStream);
+
 				if (msg == NULL)
 					msg = "end of stream";
 				ereport(COMMERROR,
@@ -1132,7 +1146,8 @@ pq_getbyte(void)
 
 	while (PqRecvPointer >= PqRecvLength)
 	{
-		if (pq_recvbuf(false) == EOF)		/* If nothing in buffer, then recv some */
+		if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv
+										 * some */
 			return EOF;			/* Failed to recv data */
 	}
 	return (unsigned char) PqRecvBuffer[PqRecvPointer++];
@@ -1151,7 +1166,8 @@ pq_peekbyte(void)
 
 	while (PqRecvPointer >= PqRecvLength)
 	{
-		if (pq_recvbuf(false) == EOF)		/* If nothing in buffer, then recv some */
+		if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv
+										 * some */
 			return EOF;			/* Failed to recv data */
 	}
 	return (unsigned char) PqRecvBuffer[PqRecvPointer];
@@ -1197,7 +1213,8 @@ pq_getbytes(char *s, size_t len)
 	{
 		while (PqRecvPointer >= PqRecvLength)
 		{
-			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv some */
+			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv
+											 * some */
 				return EOF;		/* Failed to recv data */
 		}
 		amount = PqRecvLength - PqRecvPointer;
@@ -1231,7 +1248,8 @@ pq_discardbytes(size_t len)
 	{
 		while (PqRecvPointer >= PqRecvLength)
 		{
-			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv some */
+			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv
+											 * some */
 				return EOF;		/* Failed to recv data */
 		}
 		amount = PqRecvLength - PqRecvPointer;
@@ -1272,7 +1290,8 @@ pq_getstring(StringInfo s)
 	{
 		while (PqRecvPointer >= PqRecvLength)
 		{
-			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv some */
+			if (pq_recvbuf(false) == EOF)	/* If nothing in buffer, then recv
+											 * some */
 				return EOF;		/* Failed to recv data */
 		}
 
@@ -1523,11 +1542,16 @@ internal_flush(void)
 	char	   *bufend = PqSendBuffer + PqSendPointer;
 
 	while (bufptr < bufend || zpq_buffered_tx(PqStream) != 0)
-    /* has more data to flush or unsent data in internal compression buffer */
+
+		/*
+		 * has more data to flush or unsent data in internal compression
+		 * buffer
+		 */
 	{
-		int		r;
-		size_t  processed = 0;
-		size_t  available = bufend - bufptr;
+		int			r;
+		size_t		processed = 0;
+		size_t		available = bufend - bufptr;
+
 		r = PqStream
 			? zpq_write(PqStream, bufptr, available, &processed)
 			: secure_write(MyProcPort, bufptr, available);
@@ -2119,7 +2143,8 @@ PG_FUNCTION_INFO_V1(pg_compression_algorithm);
 Datum
 pg_compression_algorithm(PG_FUNCTION_ARGS)
 {
-	char const* algorithm_name = PqStream ? zpq_algorithm_name(PqStream) : NULL;
+	char const *algorithm_name = PqStream ? zpq_algorithm_name(PqStream) : NULL;
+
 	if (algorithm_name)
 		PG_RETURN_TEXT_P(cstring_to_text(algorithm_name));
 	else

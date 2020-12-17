@@ -1811,7 +1811,7 @@ PQgetResult(PGconn *conn)
 		 * undue delay in reporting a previous write failure.)
 		 */
 		if (flushResult || (zpq_buffered_rx(conn->zstream) == 0 &&
-			pqWait(true, false, conn)) ||
+							pqWait(true, false, conn)) ||
 			pqReadData(conn) < 0)
 		{
 			/*
