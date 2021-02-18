@@ -37,6 +37,7 @@
 #include "executor/executor.h"
 #include "miscadmin.h"
 #include "pgstat.h"
+#include "port.h"
 #include "storage/bufmgr.h"
 #include "storage/bufpage.h"
 #include "storage/lmgr.h"
@@ -54,6 +55,8 @@ static void reform_and_rewrite_tuple(HeapTuple tuple,
 static bool SampleHeapTupleVisible(TableScanDesc scan, Buffer buffer,
 								   HeapTuple tuple,
 								   OffsetNumber tupoffset);
+
+static int	compare_rows(const void *a, const void *b);
 
 static BlockNumber heapam_scan_get_blocks_done(HeapScanDesc hscan);
 
@@ -1274,6 +1277,17 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
+
+	/*
+	 * If we didn't find as many tuples as we wanted then we're done. No sort
+	 * is needed, since they're already in order.
+	 *
+	 * Otherwise we need to sort the collected tuples by position
+	 * (itempointer). It's not worth worrying about corner cases where the
+	 * tuples are already sorted.
+	 */
+	if (numrows == targrows)
+		qsort((void *) rows, numrows, sizeof(HeapTuple), compare_rows);
 
 	/*
 	 * Estimate total numbers of live and dead rows in relation, extrapolating
@@ -2678,6 +2692,30 @@ SampleHeapTupleVisible(TableScanDesc scan, Buffer buffer,
 		return HeapTupleSatisfiesVisibility(tuple, scan->rs_snapshot,
 											buffer);
 	}
+}
+
+/*
+ * qsort comparator for sorting rows[] array
+ */
+static int
+compare_rows(const void *a, const void *b)
+{
+	HeapTuple	ha = *(const HeapTuple *) a;
+	HeapTuple	hb = *(const HeapTuple *) b;
+	BlockNumber ba = ItemPointerGetBlockNumber(&ha->t_self);
+	OffsetNumber oa = ItemPointerGetOffsetNumber(&ha->t_self);
+	BlockNumber bb = ItemPointerGetBlockNumber(&hb->t_self);
+	OffsetNumber ob = ItemPointerGetOffsetNumber(&hb->t_self);
+
+	if (ba < bb)
+		return -1;
+	if (ba > bb)
+		return 1;
+	if (oa < ob)
+		return -1;
+	if (oa > ob)
+		return 1;
+	return 0;
 }
 
 
