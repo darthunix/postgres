@@ -13,7 +13,6 @@
 #define FDWAPI_H
 
 #include "access/parallel.h"
-#include "commands/vacuum.h"
 #include "nodes/execnodes.h"
 #include "nodes/pathnodes.h"
 
@@ -149,7 +148,6 @@ typedef void (*ExplainDirectModify_function) (ForeignScanState *node,
 											  struct ExplainState *es);
 
 typedef int (*AcquireSampleRowsFunc) (Relation relation, int elevel,
-									  int natts, VacAttrStats **stats,
 									  HeapTuple *rows, int targrows,
 									  double *totalrows,
 									  double *totaldeadrows);

@@ -94,12 +94,10 @@ static void compute_index_stats(Relation onerel, double totalrows,
 static VacAttrStats *examine_attribute(Relation onerel, int attnum,
 									   Node *index_expr);
 static int	acquire_sample_rows(Relation onerel, int elevel,
-								int natts, VacAttrStats **stats,
 								HeapTuple *rows, int targrows,
 								double *totalrows, double *totaldeadrows);
 static int	compare_rows(const void *a, const void *b);
 static int	acquire_inherited_sample_rows(Relation onerel, int elevel,
-										  int natts, VacAttrStats **stats,
 										  HeapTuple *rows, int targrows,
 										  double *totalrows, double *totaldeadrows);
 static void update_attstats(Oid relid, bool inh,
@@ -505,12 +503,10 @@ do_analyze_rel(Relation onerel, VacuumParams *params,
 								 PROGRESS_ANALYZE_PHASE_ACQUIRE_SAMPLE_ROWS);
 	if (inh)
 		numrows = acquire_inherited_sample_rows(onerel, elevel,
-												attr_cnt, vacattrstats,
 												rows, targrows,
 												&totalrows, &totaldeadrows);
 	else
 		numrows = (*acquirefunc) (onerel, elevel,
-								  attr_cnt, vacattrstats,
 								  rows, targrows,
 								  &totalrows, &totaldeadrows);
 
@@ -1004,7 +1000,6 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
  */
 static int
 acquire_sample_rows(Relation onerel, int elevel,
-					int natts, VacAttrStats **stats,
 					HeapTuple *rows, int targrows,
 					double *totalrows, double *totaldeadrows)
 {
@@ -1016,7 +1011,6 @@ acquire_sample_rows(Relation onerel, int elevel,
 	scan = table_beginscan_analyze(onerel);
 
 	numrows = table_acquire_sample_rows(scan, elevel,
-										natts, stats,
 										vac_strategy, rows,
 										targrows, totalrows,
 										totaldeadrows);
@@ -1072,7 +1066,6 @@ compare_rows(const void *a, const void *b)
  */
 static int
 acquire_inherited_sample_rows(Relation onerel, int elevel,
-							  int natts, VacAttrStats **stats,
 							  HeapTuple *rows, int targrows,
 							  double *totalrows, double *totaldeadrows)
 {
@@ -1246,7 +1239,6 @@ acquire_inherited_sample_rows(Relation onerel, int elevel,
 
 				/* Fetch a random sample of the child's rows */
 				childrows = (*acquirefunc) (childrel, elevel,
-											natts, stats,
 											rows + numrows, childtargrows,
 											&trows, &tdrows);
 

@@ -1180,7 +1180,6 @@ heapam_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
  */
 static int
 heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
-						   int natts, VacAttrStats **stats,
 						   BufferAccessStrategy bstrategy,
 						   HeapTuple *rows, int targrows,
 						   double *totalrows, double *totaldeadrows)
