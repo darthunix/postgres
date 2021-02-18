@@ -1182,7 +1182,7 @@ heapam_scan_analyze_next_tuple(TableScanDesc scan, TransactionId OldestXmin,
  * density near the start of the table.
  */
 static int
-heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
+heapam_acquire_sample_rows(Relation rel, int elevel,
 						   BufferAccessStrategy bstrategy,
 						   HeapTuple *rows, int targrows,
 						   double *totalrows, double *totaldeadrows)
@@ -1197,8 +1197,11 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 	BlockSamplerData bs;
 	ReservoirStateData rstate;
 	TupleTableSlot *slot;
+	TableScanDesc scan;
 	BlockNumber nblocks;
 	BlockNumber blksdone = 0;
+
+	scan = heap_beginscan(rel, NULL, 0, NULL, NULL, SO_TYPE_ANALYZE);
 
 	totalblocks = RelationGetNumberOfBlocks(scan->rs_rd);
 
@@ -1277,6 +1280,7 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
+	heap_endscan(scan);
 
 	/*
 	 * If we didn't find as many tuples as we wanted then we're done. No sort

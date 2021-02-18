@@ -994,8 +994,9 @@ examine_attribute(Relation onerel, int attnum, Node *index_expr)
  * We also estimate the total numbers of live and dead rows in the table,
  * and return them into *totalrows and *totaldeadrows, respectively.
  *
- * AM sample function MUST return tuples in the order by physical position
- * in the table. (We will rely on this later to derive correlation estimates.)
+ * AM acquire sample function MUST return tuples in the order by physical
+ * position in the table. (We will rely on this later to derive correlation
+ * estimates.)
  */
 static int
 acquire_sample_rows(Relation onerel, int elevel,
@@ -1003,18 +1004,13 @@ acquire_sample_rows(Relation onerel, int elevel,
 					double *totalrows, double *totaldeadrows)
 {
 	int			numrows = 0;	/* # rows now in reservoir */
-	TableScanDesc scan;
 
 	Assert(targrows > 0);
 
-	scan = table_beginscan_analyze(onerel);
-
-	numrows = table_acquire_sample_rows(scan, elevel,
+	numrows = table_acquire_sample_rows(onerel, elevel,
 										vac_strategy, rows,
 										targrows, totalrows,
 										totaldeadrows);
-
-	table_endscan(scan);
 
 	return numrows;
 }

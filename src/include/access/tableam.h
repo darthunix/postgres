@@ -604,7 +604,7 @@ typedef struct TableAmRoutine
 	 * This callback needs to fill reservour with sample rows during analyze
 	 * scan.
 	 */
-	int			(*acquire_sample_rows) (TableScanDesc scan,
+	int			(*acquire_sample_rows) (Relation onerel,
 										int elevel,
 										BufferAccessStrategy bstrategy,
 										HeapTuple *rows,
@@ -917,19 +917,6 @@ table_beginscan_tid(Relation rel, Snapshot snapshot)
 	uint32		flags = SO_TYPE_TIDSCAN;
 
 	return rel->rd_tableam->scan_begin(rel, snapshot, 0, NULL, NULL, flags);
-}
-
-/*
- * table_beginscan_analyze is an alternative entry point for setting up a
- * TableScanDesc for an ANALYZE scan.  As with bitmap scans, it's worth using
- * the same data structure although the behavior is rather different.
- */
-static inline TableScanDesc
-table_beginscan_analyze(Relation rel)
-{
-	uint32		flags = SO_TYPE_ANALYZE;
-
-	return rel->rd_tableam->scan_begin(rel, NULL, 0, NULL, NULL, flags);
 }
 
 /*
@@ -1569,15 +1556,15 @@ table_relation_vacuum(Relation rel, struct VacuumParams *params,
 }
 
 static inline int
-table_acquire_sample_rows(TableScanDesc scan, int elevel,
+table_acquire_sample_rows(Relation rel, int elevel,
 						  BufferAccessStrategy bstrategy,
 						  HeapTuple *rows, int targrows,
 						  double *totalrows, double *totaldeadrows)
 {
-	return scan->rs_rd->rd_tableam->acquire_sample_rows(scan, elevel,
-														bstrategy, rows,
-														targrows, totalrows,
-														totaldeadrows);
+	return rel->rd_tableam->acquire_sample_rows(rel, elevel,
+													 bstrategy, rows,
+													 targrows, totalrows,
+													 totaldeadrows);
 }
 
 /*
