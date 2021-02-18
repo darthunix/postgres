@@ -601,8 +601,13 @@ typedef struct TableAmRoutine
 									BufferAccessStrategy bstrategy);
 
 	/*
-	 * This callback needs to fill reservour with sample rows during analyze
-	 * scan.
+	 * This callback needs to acquire a sample of rows from the table (for
+	 * ANALYZE). Note, that returned tuples in a sample MUST be in the order
+	 * by physical position in the table, as we rely on this fact in
+	 * acquire_sample_rows().
+	 *
+	 * Buffer ring access strategy is derived from analyze_rel() and should be
+	 * used by AMs, using shared buffers for ANALYZE.
 	 */
 	int			(*acquire_sample_rows) (Relation onerel,
 										int elevel,
