@@ -1195,6 +1195,7 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 	ReservoirStateData rstate;
 	TupleTableSlot *slot;
 	BlockNumber nblocks;
+	BlockNumber blksdone = 0;
 
 	totalblocks = RelationGetNumberOfBlocks(scan->rs_rd);
 
@@ -1203,6 +1204,10 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 
 	/* Prepare for sampling block numbers */
 	nblocks = BlockSampler_Init(&bs, totalblocks, targrows, random());
+
+	/* Report sampling block numbers */
+	pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_TOTAL,
+								 nblocks);
 
 	/* Prepare for sampling rows */
 	reservoir_init_selection_state(&rstate, targrows);
@@ -1263,6 +1268,9 @@ heapam_acquire_sample_rows(TableScanDesc scan, int elevel,
 
 			samplerows += 1;
 		}
+
+		pgstat_progress_update_param(PROGRESS_ANALYZE_BLOCKS_DONE,
+									 ++blksdone);
 	}
 
 	ExecDropSingleTupleTableSlot(slot);
